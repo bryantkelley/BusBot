@@ -1,0 +1,16 @@
+{
+  "name": "@bryantkelley/busbot",
+  "version": "0.0.0",
+  "description": "A MeshCore bot to send King County Metro bus information upon request",
+  "license": "MIT",
+  "author": "Bryant Kelley",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --env-file=.env index.js"
+  },
+  "dependencies": {
+    "@liamcottle/meshcore.js": "^1.8.0"
+  },
+  "devDependencies": {}
+}
