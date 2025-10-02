@@ -6,5 +6,8 @@ package-lock.json
 # environment config
 .env*
 
+# metro data
+/metro
+
 # misc
 .DS_Store

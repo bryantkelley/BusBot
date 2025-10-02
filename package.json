@@ -7,7 +7,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env index.js"
+    "start": "node --env-file=.env index.js",
+    "setup": "node scripts/convert_txt.js"
   },
   "dependencies": {
     "@liamcottle/meshcore.js": "^1.8.0"
