@@ -1,4 +1,11 @@
+import fs from "node:fs";
 import { NodeJSSerialConnection, Constants } from "@liamcottle/meshcore.js";
+
+const calendar = await JSON.parse(fs.readFileSync("./metro/json/calendar.json"));
+const routes = await JSON.parse(fs.readFileSync("./metro/json/routes.json"));
+const stops = await JSON.parse(fs.readFileSync("./metro/json/stops.json"));
+const stopTimes = await JSON.parse(fs.readFileSync("./metro/json/stop_times.json"));
+const trips = await JSON.parse(fs.readFileSync("./metro/json/trips.json"));
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
@@ -13,7 +20,7 @@ connection.on("connected", async () => {
   console.log("Time Synced");
 
   // Set Name
-  await connection.setAdvertName("KCM BusBot 🚎");
+  await connection.setAdvertName(process.env.NODE_NAME);
 
   await connection.setAutoAddContacts(true);
 });
@@ -29,7 +36,6 @@ connection.on(Constants.PushCodes.MsgWaiting, async () => {
         handleChannelMessage(message.channelMessage);
       }
     });
-
   } catch (error) {
     console.log(error);
   }
@@ -44,10 +50,134 @@ const handleContactMessage = async (message) => {
     return;
   }
 
-  if (message.text.toLowerCase().startsWith("bus")) {
-    await connection.sendTextMessage(contact.publicKey, "Transit scheduling, geographic, and real-time data provided by permission of King County.", Constants.TxtTypes.Plain);
+  const messageArray = message.text.split(" ").map((word) => word.toLowerCase());
+
+  if (!messageArray.length) {
     return;
   }
+
+  if (messageArray[0] === "help") {
+    if (messageArray.length === 1) {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "Send the stop number and optionally route number for upcoming arrivals. Ex: 1120 11 for stop 1120 and route 11. \nOther commands: info, alerts",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+    if (messageArray[1] === "info") {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "Transit scheduling, geographic, and real-time data provided by permission of King County.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+
+    if (messageArray[1] === "alerts") {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 1120 11 for alerts for stop 1120 and route 11.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+    await connection.sendTextMessage(contact.publicKey, "No help found.", Constants.TxtTypes.Plain);
+    return;
+  }
+
+  if (messageArray[0] === "alerts") {
+    if (messageArray.length === 1) {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 1120 11 for alerts for stop 1120 and route 11.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+
+    if (messageArray.length === 2) {
+      // all alerts for a stop
+    }
+
+    if (messageArray.length === 3) {
+      // alerts for a stop and route
+    }
+  }
+
+  // stop id and route id
+  if (messageArray.length === 2) {
+    const stop = stops.find((s) => s.stop_id === messageArray[0]);
+    if (!stop) {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "No stop found with that number.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+    const route = routes.find((r) => r.route_short_name === `\"${encodeURI(messageArray[1])}\"`);
+    if (!route) {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "No route found with that number.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
+    const currentTime = new Date(Date.now()).toLocaleTimeString("en-US", { hour12: false });
+    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const currentDay = dayNames[new Date(Date.now()).getDay()];
+    const trip = trips
+      .filter((t) => t.route_id === route.route_id)
+      .filter((t) => calendar.find((c) => c.service_id === t.service_id)[currentDay] === "1");
+    const futureStopTimes = stopTimes
+      .filter((stopTime) => stopTime.stop_id === stop.stop_id)
+      .filter((stopTime) => stopTime.arrival_time >= currentTime);
+
+    const matchingStops = [];
+    futureStopTimes.forEach((s) => {
+      trip.forEach((t) => {
+        if (s.trip_id === t.trip_id) {
+          matchingStops.push(s);
+        }
+      });
+    });
+
+    let response = `${stop.stop_name}`;
+    if (matchingStops.length) {
+      matchingStops
+        .sort((a, b) => (a.arrival_time > b.arrival_time ? 1 : -1))
+        .slice(0, 5)
+        .map((ms) => (response += `\n${ms.arrival_time}`));
+    } else {
+      response += "\nNo upcoming trips.";
+    }
+
+    await connection.sendTextMessage(contact.publicKey, response, Constants.TxtTypes.Plain);
+    return;
+  }
+
+  // stop id
+  if (messageArray.length === 1) {
+    const stop = stops.find((stop) => stop.stop_id === messageArray[0]);
+    const currentTime = new Date(Date.now()).toLocaleTimeString("en-US", { hour12: false });
+    const schedule = stopTimes
+      .filter((stopTime) => stopTime.stop_id === stop.stop_id)
+      .filter((stopTime) => stopTime.arrival_time >= currentTime);
+    await connection.sendTextMessage(
+      contact.publicKey,
+      `${stop.stop_name}\nTotal Stops Found: ${schedule.length}`,
+      Constants.TxtTypes.Plain
+    );
+    return;
+  }
+
+  await connection.sendTextMessage(
+    contact.publicKey,
+    "Transit scheduling, geographic, and real-time data provided by permission of King County.",
+    Constants.TxtTypes.Plain
+  );
   return;
 };
 
@@ -55,26 +185,29 @@ const handleChannelMessage = async (message) => {
   console.log("Channel Message Received");
   const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
 
-  if (message.channelIdx !== commandChannel.channelIdx) {
-    console.log("Message not in command channel");
-    return;
-  }
-
-  if (message.text.toLowerCase().includes("bus")) {
-    await connection.sendChannelTextMessage(commandChannel.channelIdx, `King County Metro bus and route info available via DM.`);
+  if (
+    message.channelIdx === commandChannel.channelIdx &&
+    message.text.toLowerCase().includes("bus")
+  ) {
+    await connection.sendChannelTextMessage(
+      commandChannel.channelIdx,
+      `King County Metro bus and route info available via DM.`
+    );
     return;
   }
   return;
-}
+};
 
 // Clean up contacts with auto-add contacts on
 connection.on(Constants.PushCodes.Advert, async () => {
   const contacts = await connection.getContacts();
   // Filter out users and remove any room servers and repeaters
-  await contacts.filter(({ type }) => type !== 1).map(({ publicKey, advName }) => {
-    console.log("Removing Contact:", advName);
-    connection.removeContact(publicKey);
-  });
+  await contacts
+    .filter(({ type }) => type !== 1)
+    .map(({ publicKey, advName }) => {
+      console.log("Removing Contact:", advName);
+      connection.removeContact(publicKey);
+    });
 });
 
 connection.on("disconnected", () => {
