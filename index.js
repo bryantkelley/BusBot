@@ -65,7 +65,12 @@ const handleContactMessage = async (message) => {
     if (messageArray.length === 1) {
       await connection.sendTextMessage(
         contact.publicKey,
-        "Send the stop number and optionally route number for scheduled arrivals. Ex: 120 G Line for alerts for stop 120 and G Line RapidRide. \nOther commands: info, alerts",
+        "Send the stop number and optionally route number for scheduled arrivals. Ex: 120 G Line for alerts for stop 120 and G Line RapidRide.",
+        Constants.TxtTypes.Plain
+      );
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "Other commands: info, alerts",
         Constants.TxtTypes.Plain
       );
       return;
@@ -105,6 +110,15 @@ const handleContactMessage = async (message) => {
       // all alerts for a stop
       // attempt to split messageArray[1] on a space to get stop and route
     }
+  }
+
+  if (messageArray[0] === "info") {
+    await connection.sendTextMessage(
+      contact.publicKey,
+      "Transit scheduling, geographic, and real-time data provided by permission of King County.",
+      Constants.TxtTypes.Plain
+    );
+    return;
   }
 
   // stop id and route id
@@ -147,12 +161,29 @@ const handleContactMessage = async (message) => {
       });
     });
 
+    const prettyTime = (realTime, arrivalTime) => {
+      const realArray = realTime.split(":").map((s) => parseInt(s));
+      const arrivalArray = arrivalTime.split(":").map((s) => parseInt(s));
+      const realSeconds = realArray[0] * 60 * 60 + realArray[1] * 60 + realArray[2];
+      const arrivalSeconds = arrivalArray[0] * 60 * 60 + arrivalArray[1] * 60 + arrivalArray[2];
+      const difference = arrivalSeconds - realSeconds;
+      if (difference < 90) {
+        // less than 90 seconds
+        return "now";
+      }
+      if (difference < 60 * 60) {
+        // less than an hour
+        return `${Math.floor(difference / 60)} mins`;
+      }
+      return arrivalTime;
+    };
+
     let response = `${stop.stop_name}`;
     if (matchingStops.length) {
       matchingStops
         .sort((a, b) => (a.arrival_time > b.arrival_time ? 1 : -1))
         .slice(0, 5)
-        .map((ms) => (response += `\n${ms.arrival_time} (s)`));
+        .map((ms) => (response += `\n${prettyTime(currentTime, ms.arrival_time)} (s)`));
     } else {
       response += "\nNo upcoming trips.";
     }
@@ -164,6 +195,14 @@ const handleContactMessage = async (message) => {
   // stop id
   if (messageArray.length === 1) {
     const stop = stops.find((stop) => stop.stop_id === messageArray[0]);
+    if (!stop) {
+      await connection.sendTextMessage(
+        contact.publicKey,
+        "No stop found with that id.",
+        Constants.TxtTypes.Plain
+      );
+      return;
+    }
     const currentTime = new Date(Date.now()).toLocaleTimeString("en-US", { hour12: false });
     const schedule = stopTimes
       .filter((stopTime) => stopTime.stop_id === stop.stop_id)
