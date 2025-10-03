@@ -49,18 +49,23 @@ const handleContactMessage = async (message) => {
     console.log("No contact found for message");
     return;
   }
-
-  const messageArray = message.text.split(" ").map((word) => word.toLowerCase());
-
-  if (!messageArray.length) {
+  const cleanedMessage = message.text.toLowerCase().trim();
+  if (!cleanedMessage.length) {
+    // send help message?
     return;
   }
+
+  const separatorIndex = cleanedMessage.indexOf(" "); // Can be -1 or greater than 0, but never 0
+  const messageArray =
+    separatorIndex > 0
+      ? [cleanedMessage.slice(0, separatorIndex), cleanedMessage.slice(separatorIndex + 1)]
+      : [cleanedMessage];
 
   if (messageArray[0] === "help") {
     if (messageArray.length === 1) {
       await connection.sendTextMessage(
         contact.publicKey,
-        "Send the stop number and optionally route number for upcoming arrivals. Ex: 1120 11 for stop 1120 and route 11. \nOther commands: info, alerts",
+        "Send the stop number and optionally route number for scheduled arrivals. Ex: 120 G Line for alerts for stop 120 and G Line RapidRide. \nOther commands: info, alerts",
         Constants.TxtTypes.Plain
       );
       return;
@@ -77,7 +82,7 @@ const handleContactMessage = async (message) => {
     if (messageArray[1] === "alerts") {
       await connection.sendTextMessage(
         contact.publicKey,
-        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 1120 11 for alerts for stop 1120 and route 11.",
+        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 120 G Line for alerts for stop 120 and G Line RapidRide.",
         Constants.TxtTypes.Plain
       );
       return;
@@ -90,7 +95,7 @@ const handleContactMessage = async (message) => {
     if (messageArray.length === 1) {
       await connection.sendTextMessage(
         contact.publicKey,
-        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 1120 11 for alerts for stop 1120 and route 11.",
+        "Get alerts for a stop.\nEx: alerts 1120 for all alerts for stop 1120.\nEx: alerts 120 G Line for alerts for stop 120 and G Line RapidRide.",
         Constants.TxtTypes.Plain
       );
       return;
@@ -98,10 +103,7 @@ const handleContactMessage = async (message) => {
 
     if (messageArray.length === 2) {
       // all alerts for a stop
-    }
-
-    if (messageArray.length === 3) {
-      // alerts for a stop and route
+      // attempt to split messageArray[1] on a space to get stop and route
     }
   }
 
@@ -111,16 +113,17 @@ const handleContactMessage = async (message) => {
     if (!stop) {
       await connection.sendTextMessage(
         contact.publicKey,
-        "No stop found with that number.",
+        "No stop found with that id.",
         Constants.TxtTypes.Plain
       );
       return;
     }
-    const route = routes.find((r) => r.route_short_name === `\"${encodeURI(messageArray[1])}\"`);
+    const route = routes.find((r) => r.route_short_name.toLowerCase() === `\"${messageArray[1]}\"`);
+
     if (!route) {
       await connection.sendTextMessage(
         contact.publicKey,
-        "No route found with that number.",
+        "No route found with that id.",
         Constants.TxtTypes.Plain
       );
       return;
@@ -149,7 +152,7 @@ const handleContactMessage = async (message) => {
       matchingStops
         .sort((a, b) => (a.arrival_time > b.arrival_time ? 1 : -1))
         .slice(0, 5)
-        .map((ms) => (response += `\n${ms.arrival_time}`));
+        .map((ms) => (response += `\n${ms.arrival_time} (s)`));
     } else {
       response += "\nNo upcoming trips.";
     }
