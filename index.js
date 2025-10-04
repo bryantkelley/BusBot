@@ -7,6 +7,27 @@ const stops = await JSON.parse(fs.readFileSync("./metro/json/stops.json"));
 const stopTimes = await JSON.parse(fs.readFileSync("./metro/json/stop_times.json"));
 const trips = await JSON.parse(fs.readFileSync("./metro/json/trips.json"));
 
+const prettyTime = (realTime, arrivalTime) => {
+  const realArray = realTime.split(":").map((s) => parseInt(s));
+  const arrivalArray = arrivalTime.split(":").map((s) => parseInt(s));
+  const realSeconds = realArray[0] * 60 * 60 + realArray[1] * 60 + realArray[2];
+  const arrivalSeconds = arrivalArray[0] * 60 * 60 + arrivalArray[1] * 60 + arrivalArray[2];
+  const difference = arrivalSeconds - realSeconds;
+  if (difference < 75) {
+    // less than 75 seconds
+    return "now";
+  }
+  if (difference < 120) {
+    // less than 2 minutes
+    return `1 min`;
+  }
+  if (difference < 60 * 60) {
+    // less than an hour
+    return `${Math.floor(difference / 60)} mins`;
+  }
+  return arrivalTime;
+};
+
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
 
@@ -161,23 +182,6 @@ const handleContactMessage = async (message) => {
       });
     });
 
-    const prettyTime = (realTime, arrivalTime) => {
-      const realArray = realTime.split(":").map((s) => parseInt(s));
-      const arrivalArray = arrivalTime.split(":").map((s) => parseInt(s));
-      const realSeconds = realArray[0] * 60 * 60 + realArray[1] * 60 + realArray[2];
-      const arrivalSeconds = arrivalArray[0] * 60 * 60 + arrivalArray[1] * 60 + arrivalArray[2];
-      const difference = arrivalSeconds - realSeconds;
-      if (difference < 90) {
-        // less than 90 seconds
-        return "now";
-      }
-      if (difference < 60 * 60) {
-        // less than an hour
-        return `${Math.floor(difference / 60)} mins`;
-      }
-      return arrivalTime;
-    };
-
     let response = `${stop.stop_name}`;
     if (matchingStops.length) {
       matchingStops
@@ -207,11 +211,34 @@ const handleContactMessage = async (message) => {
     const schedule = stopTimes
       .filter((stopTime) => stopTime.stop_id === stop.stop_id)
       .filter((stopTime) => stopTime.arrival_time >= currentTime);
-    await connection.sendTextMessage(
-      contact.publicKey,
-      `${stop.stop_name}\nTotal Stops Found: ${schedule.length}`,
-      Constants.TxtTypes.Plain
-    );
+    const nextArrivalByRoute = []; // { key: route_id, route_short_name, arrival_time }
+    schedule.forEach((stopTime) => {
+      const trip = trips.find((trip) => trip.trip_id === stopTime.trip_id);
+      const route = routes.find((route) => route.route_id === trip.route_id);
+      if (
+        !nextArrivalByRoute[route.route_id] ||
+        nextArrivalByRoute[route.route_id].arrival_time > stopTime.arrival_time
+      ) {
+        nextArrivalByRoute[route.route_id] = {
+          route_short_name: route.route_short_name,
+          arrival_time: stopTime.arrival_time,
+        };
+      }
+    });
+
+    let response = `${stop.stop_name}`;
+    if (nextArrivalByRoute.length) {
+      nextArrivalByRoute.forEach(
+        (arrival) =>
+          (response += `\n${arrival.route_short_name.replaceAll('"', "")} - ${prettyTime(
+            currentTime,
+            arrival.arrival_time
+          )}`)
+      );
+    } else {
+      response += "\nNo upcoming trips.";
+    }
+    await connection.sendTextMessage(contact.publicKey, response, Constants.TxtTypes.Plain);
     return;
   }
 
