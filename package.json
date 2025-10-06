@@ -5,13 +5,15 @@
   "license": "MIT",
   "author": "Bryant Kelley",
   "type": "module",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
-    "start": "node --env-file=.env index.js",
+    "start": "tsx --env-file=.env index.ts",
     "setup": "node scripts/convert_txt.js"
   },
   "dependencies": {
     "@liamcottle/meshcore.js": "^1.8.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  }
 }
