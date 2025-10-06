@@ -98,7 +98,7 @@ const handleContactMessage = async (message: any) => {
     console.log("No contact found for message");
     return;
   }
-  const cleanedMessage = message.text.toLowerCase().trim();
+  const cleanedMessage = message.text.trim().toLowerCase();
 
   const reply = handleCommand(cleanedMessage);
 
@@ -113,9 +113,8 @@ const handleChannelMessage = async (message: any) => {
   const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
 
   if (message.channelIdx === commandChannel.channelIdx) {
-    const separatorIndex = message.text.toLowerCase().trim().indexOf(":");
-    const cleanedMessage: string = message.text.slice(separatorIndex + 1);
-
+    const separatorIndex = message.text.trim().indexOf(":");
+    const cleanedMessage: string = message.text.slice(separatorIndex + 2).toLowerCase(); // remove the colon and the following space
     const reply = handleCommand(cleanedMessage);
 
     if (reply) {
