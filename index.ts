@@ -112,7 +112,7 @@ const handleContactMessage = async (message: any) => {
   if (reply) {
     setTimeout(async () => {
       await connection.sendTextMessage(contact.publicKey, reply, Constants.TxtTypes.Plain);
-    }, 1000);
+    }, 5000);
   }
   return;
 };
@@ -129,7 +129,7 @@ const handleChannelMessage = async (message: any) => {
     if (reply) {
       setTimeout(async () => {
         await connection.sendChannelTextMessage(commandChannel.channelIdx, reply);
-      }, 1000);
+      }, 5000);
     }
     return;
   }
