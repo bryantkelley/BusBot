@@ -1,13 +1,14 @@
-import { readFileSync } from "node:fs";
 import { NodeJSSerialConnection, Constants } from "@liamcottle/meshcore.js";
-import { prettyTime, TimeString } from "./utils";
-import { alerts, help, helpAlerts, helpBus, helpInfo, info } from "./commands";
-
-const calendar = await JSON.parse(readFileSync("./metro/json/calendar.json", "utf8"));
-const routes = await JSON.parse(readFileSync("./metro/json/routes.json", "utf8"));
-const stops = await JSON.parse(readFileSync("./metro/json/stops.json", "utf8"));
-const stopTimes = await JSON.parse(readFileSync("./metro/json/stop_times.json", "utf8"));
-const trips = await JSON.parse(readFileSync("./metro/json/trips.json", "utf8"));
+import {
+  alerts,
+  busStop,
+  busStopAndRoute,
+  help,
+  helpAlerts,
+  helpBus,
+  helpInfo,
+  info,
+} from "./commands";
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
@@ -46,6 +47,49 @@ connection.on(Constants.PushCodes.MsgWaiting, async () => {
   }
 });
 
+const handleCommand = (cleanedMessage: string): string | undefined => {
+  let reply = "";
+  if (cleanedMessage.startsWith("help")) {
+    if (cleanedMessage === "help alerts") {
+      reply = helpAlerts();
+    } else if (cleanedMessage === "help bus") {
+      reply = helpBus();
+    } else if (cleanedMessage === "help info") {
+      reply = helpInfo();
+    } else {
+      reply = help();
+    }
+  } else if (cleanedMessage.startsWith("info")) {
+    reply = info();
+  } else if (cleanedMessage.startsWith("alerts")) {
+    reply = alerts();
+  } else if (cleanedMessage.startsWith("bus")) {
+    const firstSpaceIndex = cleanedMessage.indexOf(" "); // Space after the word bus
+    if (firstSpaceIndex === -1) {
+      // If no space found, return help
+      reply = helpBus();
+    } else if (firstSpaceIndex !== 3) {
+      // If the first space isn't the fourth character, then this isn't a command to answer
+      return;
+    } else {
+      const secondSpaceIndex = cleanedMessage.indexOf(" ", firstSpaceIndex + 1);
+      if (secondSpaceIndex === -1) {
+        // If there's no second space found, then this is a stopId only
+        const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
+        reply = busStop(stopId);
+      } else {
+        const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
+        const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
+        reply = busStopAndRoute(stopId, routeId);
+      }
+    }
+  } else {
+    // no command found, ignore this message
+    return;
+  }
+  return reply;
+};
+
 const handleContactMessage = async (message: any) => {
   console.log("Contact Message Received");
 
@@ -56,141 +100,11 @@ const handleContactMessage = async (message: any) => {
   }
   const cleanedMessage = message.text.toLowerCase().trim();
 
-  let reply = "";
-  if (cleanedMessage.beginsWith("help")) {
-    if (cleanedMessage === "help alerts") {
-      reply = helpAlerts();
-    } else if (cleanedMessage === "help bus") {
-      reply = helpBus();
-    } else if (cleanedMessage === "help info") {
-      reply = helpInfo();
-    } else {
-      reply = help();
-    }
-  } else if (cleanedMessage.beginsWith("info")) {
-    reply = info();
-  } else if (cleanedMessage.beginsWith("alerts")) {
-    reply = alerts();
-  } else if (cleanedMessage.beginsWith("bus")) {
-    const separatorIndex = cleanedMessage.indexOf(" "); // Can be -1 or greater than 0, but never 0
-    const messageArray =
-      separatorIndex > 0
-        ? [cleanedMessage.slice(0, separatorIndex), cleanedMessage.slice(separatorIndex + 1)]
-        : [cleanedMessage];
+  const reply = handleCommand(cleanedMessage);
 
-    // stop id and route id
-    if (messageArray.length === 2) {
-      const stop = stops.find((s: any) => s.stop_id === messageArray[0]);
-      if (!stop) {
-        await connection.sendTextMessage(
-          contact.publicKey,
-          "No stop found with that id.",
-          Constants.TxtTypes.Plain
-        );
-        return;
-      }
-      const route = routes.find(
-        (r: any) => r.route_short_name.toLowerCase() === `\"${messageArray[1]}\"`
-      );
-
-      if (!route) {
-        await connection.sendTextMessage(
-          contact.publicKey,
-          "No route found with that id.",
-          Constants.TxtTypes.Plain
-        );
-        return;
-      }
-      const currentTime = new Date(Date.now()).toLocaleTimeString("en-US", {
-        hour12: false,
-      }) as TimeString;
-      const dayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-      const currentDay = dayNames[new Date(Date.now()).getDay()];
-      const trip = trips
-        .filter((t: any) => t.route_id === route.route_id)
-        .filter(
-          (t: any) => calendar.find((c: any) => c.service_id === t.service_id)[currentDay] === "1"
-        );
-      const futureStopTimes = stopTimes
-        .filter((stopTime: any) => stopTime.stop_id === stop.stop_id)
-        .filter((stopTime: any) => stopTime.arrival_time >= currentTime);
-
-      const matchingStops: any[] = [];
-      futureStopTimes.forEach((s: any) => {
-        trip.forEach((t: any) => {
-          if (s.trip_id === t.trip_id) {
-            matchingStops.push(s);
-          }
-        });
-      });
-
-      reply = `${stop.stop_name}`;
-      if (matchingStops.length) {
-        matchingStops
-          .sort((a, b) => (a.arrival_time > b.arrival_time ? 1 : -1))
-          .slice(0, 5)
-          .map((ms) => (reply += `\n${prettyTime(currentTime, ms.arrival_time)} (s)`));
-      } else {
-        reply += "\nNo upcoming trips.";
-      }
-    }
-
-    // stop id
-    if (messageArray.length === 1) {
-      const stop = stops.find((stop: any) => stop.stop_id === messageArray[0]);
-      if (!stop) {
-        await connection.sendTextMessage(
-          contact.publicKey,
-          "No stop found with that id.",
-          Constants.TxtTypes.Plain
-        );
-        return;
-      }
-      const currentTime = new Date(Date.now()).toLocaleTimeString("en-US", {
-        hour12: false,
-      }) as TimeString;
-      const schedule = stopTimes
-        .filter((stopTime: any) => stopTime.stop_id === stop.stop_id)
-        .filter((stopTime: any) => stopTime.arrival_time >= currentTime);
-      const nextArrivalByRoute: any[] = []; // { key: route_id, route_short_name, arrival_time }
-      schedule.forEach((stopTime: any) => {
-        const trip = trips.find((trip: any) => trip.trip_id === stopTime.trip_id);
-        const route = routes.find((route: any) => route.route_id === trip.route_id);
-        if (
-          !nextArrivalByRoute[route.route_id] ||
-          nextArrivalByRoute[route.route_id].arrival_time > stopTime.arrival_time
-        ) {
-          nextArrivalByRoute[route.route_id] = {
-            route_short_name: route.route_short_name,
-            arrival_time: stopTime.arrival_time,
-          };
-        }
-      });
-
-      reply = `${stop.stop_name}`;
-      if (nextArrivalByRoute.length) {
-        nextArrivalByRoute.forEach(
-          (arrival) =>
-            (reply += `\n${arrival.route_short_name.replaceAll('"', "")} - ${prettyTime(
-              currentTime,
-              arrival.arrival_time
-            )}`)
-        );
-      } else {
-        reply += "\nNo upcoming trips.";
-      }
-    }
+  if (reply) {
+    await connection.sendTextMessage(contact.publicKey, reply, Constants.TxtTypes.Plain);
   }
-
-  await connection.sendTextMessage(contact.publicKey, reply, Constants.TxtTypes.Plain);
   return;
 };
 
@@ -200,26 +114,13 @@ const handleChannelMessage = async (message: any) => {
 
   if (message.channelIdx === commandChannel.channelIdx) {
     const separatorIndex = message.text.toLowerCase().trim().indexOf(":");
-    const cleanedMessage = message.text.slice(separatorIndex + 1);
+    const cleanedMessage: string = message.text.slice(separatorIndex + 1);
 
-    let reply = "";
-    if (cleanedMessage.beginsWith("help")) {
-      if (cleanedMessage === "help alerts") {
-        reply = helpAlerts();
-      } else if (cleanedMessage === "help bus") {
-        reply = helpBus();
-      } else if (cleanedMessage === "help info") {
-        reply = helpInfo();
-      } else {
-        reply = help();
-      }
-    } else if (cleanedMessage.beginsWith("info")) {
-      reply = info();
-    } else if (cleanedMessage.beginsWith("alerts")) {
-      reply = alerts();
-    } else if (cleanedMessage.beginsWith("bus")) {
+    const reply = handleCommand(cleanedMessage);
+
+    if (reply) {
+      await connection.sendChannelTextMessage(commandChannel.channelIdx, reply);
     }
-    await connection.sendChannelTextMessage(commandChannel.channelIdx, reply);
     return;
   }
 };
