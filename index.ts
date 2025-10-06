@@ -10,6 +10,8 @@ import {
   info,
 } from "./commands";
 
+let lastAdvert: number; // Date.now()
+
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
 
@@ -27,8 +29,13 @@ connection.on("connected", async () => {
 
   await connection.setAutoAddContacts();
 
-  console.log("Sending Advert");
-  await connection.sendFloodAdvert();
+  // if no lastAdvert or it's been at least 12 hours, send advert
+  const currentTime = Date.now();
+  if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
+    console.log("Sending Advert");
+    await connection.sendFloodAdvert();
+    lastAdvert = currentTime;
+  }
 });
 
 connection.on(Constants.PushCodes.MsgWaiting, async () => {
@@ -134,6 +141,14 @@ connection.on(Constants.PushCodes.Advert, async () => {
       console.log("Removing Contact:", advName);
       connection.removeContact(publicKey);
     });
+
+  // wait at least 12 hours next advert
+  const currentTime = Date.now();
+  if (currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
+    console.log("Sending Advert");
+    await connection.sendFloodAdvert();
+    lastAdvert = currentTime;
+  }
 });
 
 connection.on("disconnected", async () => {
