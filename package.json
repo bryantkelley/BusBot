@@ -8,7 +8,7 @@
   "main": "index.ts",
   "scripts": {
     "start": "tsx --env-file=.env index.ts",
-    "setup": "node scripts/convert_txt.js"
+    "setup": "tsx scripts/convert_txt.ts"
   },
   "dependencies": {
     "@liamcottle/meshcore.js": "^1.8.0"

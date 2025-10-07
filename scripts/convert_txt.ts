@@ -13,7 +13,7 @@ try {
     fs.mkdirSync(outputFolder);
   }
 
-  const isFile = (fileName) => {
+  const isFile = (fileName: string) => {
     return fs.lstatSync(fileName).isFile();
   };
 
@@ -33,7 +33,7 @@ try {
 
       for (let dataIndex = 1; dataIndex < data.length; dataIndex++) {
         if (data[dataIndex].length === keys.length) {
-          let row = {};
+          let row: any = {};
           for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
             row[keys[keyIndex]] = data[dataIndex][keyIndex];
           }
