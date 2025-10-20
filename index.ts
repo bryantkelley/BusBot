@@ -30,19 +30,19 @@ connection.on("connected", async () => {
   await connection.setAutoAddContacts();
 
   // if no lastAdvert or it's been at least 12 hours, send advert
-  const currentTime = Date.now();
-  if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
-    console.log("Sending Advert");
-    await connection.sendFloodAdvert();
-    lastAdvert = currentTime;
-  }
+  // const currentTime = Date.now();
+  // if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
+  //   console.log("Sending Advert");
+  //   await connection.sendFloodAdvert();
+  //   lastAdvert = currentTime;
+  // }
 });
 
 connection.on(Constants.PushCodes.MsgWaiting, async () => {
   try {
     const waitingMessages = await connection.getWaitingMessages();
 
-    waitingMessages.forEach((message) => {
+    waitingMessages.forEach((message: any) => {
       if (message.contactMessage) {
         handleContactMessage(message.contactMessage);
       } else if (message.channelMessage) {
@@ -54,7 +54,7 @@ connection.on(Constants.PushCodes.MsgWaiting, async () => {
   }
 });
 
-const handleCommand = (cleanedMessage: string): string | undefined => {
+const handleCommand = async (cleanedMessage: string): Promise<string | undefined> => {
   let reply = "";
   if (cleanedMessage.startsWith("help")) {
     if (cleanedMessage === "help alerts") {
@@ -83,11 +83,11 @@ const handleCommand = (cleanedMessage: string): string | undefined => {
       if (secondSpaceIndex === -1) {
         // If there's no second space found, then this is a stopId only
         const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
-        reply = busStop(stopId);
+        reply = await busStop(stopId);
       } else {
         const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
         const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
-        reply = busStopAndRoute(stopId, routeId);
+        reply = await busStopAndRoute(stopId, routeId);
       }
     }
   } else {
@@ -107,7 +107,7 @@ const handleContactMessage = async (message: any) => {
   }
   const cleanedMessage = message.text.trim().toLowerCase();
 
-  const reply = handleCommand(cleanedMessage);
+  const reply = await handleCommand(cleanedMessage);
 
   if (reply) {
     setTimeout(async () => {
@@ -124,7 +124,7 @@ const handleChannelMessage = async (message: any) => {
   if (message.channelIdx === commandChannel.channelIdx) {
     const separatorIndex = message.text.trim().indexOf(":");
     const cleanedMessage: string = message.text.slice(separatorIndex + 2).toLowerCase(); // remove the colon and the following space
-    const reply = handleCommand(cleanedMessage);
+    const reply = await handleCommand(cleanedMessage);
 
     if (reply) {
       setTimeout(async () => {
