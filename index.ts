@@ -30,12 +30,12 @@ connection.on("connected", async () => {
   await connection.setAutoAddContacts();
 
   // if no lastAdvert or it's been at least 12 hours, send advert
-  // const currentTime = Date.now();
-  // if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
-  //   console.log("Sending Advert");
-  //   await connection.sendFloodAdvert();
-  //   lastAdvert = currentTime;
-  // }
+  const currentTime = Date.now();
+  if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
+    console.log("Sending Advert");
+    await connection.sendFloodAdvert();
+    lastAdvert = currentTime;
+  }
 });
 
 connection.on(Constants.PushCodes.MsgWaiting, async () => {
