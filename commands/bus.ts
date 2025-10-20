@@ -162,7 +162,7 @@ export const busStopAndRoute = async (stopId: string, routeId: string) => {
     });
   });
 
-  reply = `${stop.stop_name}`;
+  reply = `${stop.stop_name} - ${route.route_short_name}`;
   if (matchingStops.length) {
     const filteredMatches = matchingStops.map((ms) => {
       const tripUpdate = tripUpdates.find((ut: any) => ut.trip_update.trip.trip_id === ms.trip_id);
