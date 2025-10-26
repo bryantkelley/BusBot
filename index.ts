@@ -1,6 +1,7 @@
 import { NodeJSSerialConnection, Constants } from "@liamcottle/meshcore.js";
 import {
   alerts,
+  beats,
   busStop,
   busStopAndRoute,
   help,
@@ -90,6 +91,8 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
         reply = await busStopAndRoute(stopId, routeId);
       }
     }
+  } else if (cleanedMessage.startsWith("bus")) {
+    reply = beats();
   } else {
     // no command found, ignore this message
     return;
