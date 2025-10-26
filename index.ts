@@ -28,7 +28,7 @@ connection.on("connected", async () => {
   // Set Name
   await connection.setAdvertName(process.env.NODE_NAME);
 
-  await connection.setAutoAddContacts();
+  await connection.setManualAddContacts();
 
   // if no lastAdvert or it's been at least 12 hours, send advert
   const currentTime = Date.now();
@@ -91,7 +91,7 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
         reply = await busStopAndRoute(stopId, routeId);
       }
     }
-  } else if (cleanedMessage.startsWith("bus")) {
+  } else if (cleanedMessage.startsWith("beats")) {
     reply = beats();
   } else {
     // no command found, ignore this message
