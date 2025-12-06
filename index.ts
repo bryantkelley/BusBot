@@ -30,9 +30,9 @@ connection.on("connected", async () => {
 
   await connection.setManualAddContacts();
 
-  // if no lastAdvert or it's been at least 12 hours, send advert
+  // if no lastAdvert or it's been at least a week, send advert
   const currentTime = Date.now();
-  if (!lastAdvert || currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
+  if (!lastAdvert || currentTime - lastAdvert > 7 * 24 * 60 * 60 * 1000) {
     console.log("Sending Advert");
     await connection.sendFloodAdvert();
     lastAdvert = currentTime;
@@ -155,6 +155,34 @@ connection.on(Constants.PushCodes.Advert, async () => {
     console.log("Sending Advert");
     await connection.sendFloodAdvert();
     lastAdvert = currentTime;
+  }
+});
+
+// publicKey: bufferReader.readBytes(32),
+// type: bufferReader.readByte(),
+// flags: bufferReader.readByte(),
+// outPathLen: bufferReader.readInt8(),
+// outPath: bufferReader.readBytes(64),
+// advName: bufferReader.readCString(32),
+// lastAdvert: bufferReader.readUInt32LE(),
+// advLat: bufferReader.readUInt32LE(),
+// advLon: bufferReader.readUInt32LE(),
+// lastMod: bufferReader.readUInt32LE(),
+connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
+  if (advert.type === 1) {
+    const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
+      advert;
+    connection.addOrUpdateContact(
+      publicKey,
+      type,
+      flags,
+      outPathLen,
+      outPath,
+      advName,
+      lastAdvert,
+      advLat,
+      advLon
+    );
   }
 });
 
