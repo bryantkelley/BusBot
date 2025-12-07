@@ -12,10 +12,26 @@ import {
   info,
 } from "./commands";
 
-let lastAdvert: number; // Date.now()
+let lastBotAdvert: number; // Date.now()
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
+
+// Auto Advert and Info
+const checkToAdvertAndInfo = async () => {
+  // wait at least 7 days for next advert and info command
+  const currentTime = Date.now();
+  if (!lastBotAdvert || currentTime - lastBotAdvert > 7 * 24 * 60 * 60 * 1000) {
+    console.log("Sending Advert");
+    await connection.sendFloodAdvert();
+    lastBotAdvert = currentTime;
+
+    const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
+    setTimeout(async () => {
+      await connection.sendChannelTextMessage(commandChannel.channelIdx, info());
+    }, 5000);
+  }
+};
 
 // Initial Setup
 connection.on("connected", async () => {
@@ -31,13 +47,7 @@ connection.on("connected", async () => {
 
   await connection.setManualAddContacts();
 
-  // if no lastAdvert or it's been at least a week, send advert
-  const currentTime = Date.now();
-  if (!lastAdvert || currentTime - lastAdvert > 7 * 24 * 60 * 60 * 1000) {
-    console.log("Sending Advert");
-    await connection.sendFloodAdvert();
-    lastAdvert = currentTime;
-  }
+  checkToAdvertAndInfo();
 });
 
 connection.on(Constants.PushCodes.MsgWaiting, async () => {
@@ -152,13 +162,7 @@ connection.on(Constants.PushCodes.Advert, async () => {
       connection.removeContact(publicKey);
     });
 
-  // wait at least 12 hours next advert
-  const currentTime = Date.now();
-  if (currentTime - lastAdvert > 12 * 60 * 60 * 1000) {
-    console.log("Sending Advert");
-    await connection.sendFloodAdvert();
-    lastAdvert = currentTime;
-  }
+  checkToAdvertAndInfo();
 });
 
 // publicKey: bufferReader.readBytes(32),
@@ -186,6 +190,8 @@ connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
       advLat,
       advLon
     );
+
+    checkToAdvertAndInfo();
   }
 });
 
