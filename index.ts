@@ -6,6 +6,7 @@ import {
   busStopAndRoute,
   help,
   helpAlerts,
+  helpBeats,
   helpBus,
   helpInfo,
   info,
@@ -60,6 +61,8 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
   if (cleanedMessage.startsWith("help")) {
     if (cleanedMessage === "help alerts") {
       reply = helpAlerts();
+    } else if (cleanedMessage === "help beats") {
+      reply = helpBeats();
     } else if (cleanedMessage === "help bus") {
       reply = helpBus();
     } else if (cleanedMessage === "help info") {

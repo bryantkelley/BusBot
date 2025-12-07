@@ -1,11 +1,16 @@
 // help
 export const help = () => {
-  return "Commands:\n• alerts\n• bus\n• info";
+  return "Commands:\n• alerts\n• bus\n• info\n---\n• beats";
 };
 
 // help alerts
 export const helpAlerts = () => {
   return "Get alerts for a stop. Ex:\nalerts 1120";
+};
+
+// help beats
+export const helpBeats = () => {
+  return "Returns the current time in .beats (Swatch Internet Time)";
 };
 
 // help bus
