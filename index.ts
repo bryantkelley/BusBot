@@ -12,6 +12,11 @@ import {
   info,
 } from "./commands";
 
+// Check for environment variables
+if (!process.env.SERIAL_PORT) {
+  throw new Error("Missing SERIAL_PORT");
+}
+
 let lastBotAdvert: number; // Date.now()
 
 // Create connection to companion radio
@@ -26,6 +31,9 @@ const checkToAdvertAndInfo = async () => {
     await connection.sendFloodAdvert();
     lastBotAdvert = currentTime;
 
+    if (!process.env.BOT_CHANNEL) {
+      throw new Error("Missing BOT_CHANNEL");
+    }
     const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
     setTimeout(async () => {
       await connection.sendChannelTextMessage(commandChannel.channelIdx, info());
@@ -42,6 +50,9 @@ connection.on("connected", async () => {
   await connection.syncDeviceTime();
   console.log("Time Synced");
 
+  if (!process.env.NODE_NAME) {
+    throw new Error("Missing NODE_NAME");
+  }
   // Set Name
   await connection.setAdvertName(process.env.NODE_NAME);
 
@@ -135,6 +146,9 @@ const handleContactMessage = async (message: any) => {
 
 const handleChannelMessage = async (message: any) => {
   console.log("Channel Message Received");
+  if (!process.env.BOT_CHANNEL) {
+    throw new Error("Missing BOT_CHANNEL");
+  }
   const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
 
   if (message.channelIdx === commandChannel.channelIdx) {
