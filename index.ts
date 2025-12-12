@@ -163,6 +163,11 @@ const divideReply = (reply: string) => {
 		messageLength = Math.ceil(messageLength / messageCount);
 	}
 
+	// return early if no split needed
+	if (messageCount === 1) {
+		return [reply];
+	}
+
 	// naïve splitting method
 	const messages = [];
 	for (let index = 0; index < messageCount; index++) {
@@ -172,7 +177,7 @@ const divideReply = (reply: string) => {
 		const messagePart = `${reply.substring(
 			startIndex,
 			endIndex < reply.length ? endIndex : undefined
-		)} ${index + 1}/${messageCount}`;
+		)} [${index + 1}/${messageCount}]`;
 		messages.push(messagePart);
 	}
 	return messages;
