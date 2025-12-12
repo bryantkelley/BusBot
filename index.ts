@@ -153,9 +153,9 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
 // 	}
 // };
 
-const divideMessage = (message: string) => {
+const divideReply = (reply: string) => {
 	const MAX_LENGTH = 120;
-	let messageLength = message.length;
+	let messageLength = reply.length;
 	let messageCount = 1;
 
 	while (messageLength > MAX_LENGTH) {
@@ -169,9 +169,9 @@ const divideMessage = (message: string) => {
 		// check for what happens is end is too high
 		const startIndex = index * messageLength;
 		const endIndex = (index + 1) * messageLength;
-		const messagePart = `${message.substring(
+		const messagePart = `${reply.substring(
 			startIndex,
-			endIndex < message.length ? endIndex : undefined
+			endIndex < reply.length ? endIndex : undefined
 		)} ${index + 1}/${messageCount}`;
 		messages.push(messagePart);
 	}
@@ -191,10 +191,10 @@ const handleContactMessage = async (message: any) => {
 	const reply = await handleCommand(cleanedMessage);
 
 	if (reply) {
-		const messages = divideMessage(reply);
-		messages.forEach((message, index) => {
+		const replies = divideReply(reply);
+		replies.forEach((replyPart, index) => {
 			setTimeout(async () => {
-				await connection.sendTextMessage(contact.publicKey, message, Constants.TxtTypes.Plain);
+				await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
 			}, (index + 1) * 2000);
 		});
 	}
@@ -216,10 +216,10 @@ const handleChannelMessage = async (message: any) => {
 		const reply = await handleCommand(cleanedMessage);
 
 		if (reply) {
-			const messages = divideMessage(reply);
-			messages.forEach((message, index) => {
+			const replies = divideReply(reply);
+			replies.forEach((replyPart, index) => {
 				setTimeout(async () => {
-					await connection.sendChannelTextMessage(commandChannel.channelIdx, message);
+					await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
 				}, (index + 1) * 2000);
 			});
 		}
