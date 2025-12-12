@@ -197,13 +197,14 @@ const handleContactMessage = async (message: any) => {
 
 	if (reply) {
 		const replies = divideReply(reply);
-		replies.forEach((replyPart, index) => {
-			setTimeout(async () => {
-				await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
-			}, (index + 1) * 5000);
-		});
+		await Promise.all(
+			replies.map((replyPart, index) => {
+				setTimeout(async () => {
+					await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
+				}, (index + 1) * 2000);
+			})
+		);
 	}
-	return;
 };
 
 const handleChannelMessage = async (message: any) => {
@@ -222,13 +223,14 @@ const handleChannelMessage = async (message: any) => {
 
 		if (reply) {
 			const replies = divideReply(reply);
-			replies.forEach((replyPart, index) => {
-				setTimeout(async () => {
-					await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
-				}, (index + 1) * 5000);
-			});
+			await Promise.all(
+				replies.map((replyPart, index) => {
+					setTimeout(async () => {
+						await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
+					}, (index + 1) * 2000);
+				})
+			);
 		}
-		return;
 	}
 };
 
