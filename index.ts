@@ -192,10 +192,10 @@ const handleContactMessage = async (message: any) => {
 
 	if (reply) {
 		const messages = divideMessage(reply);
-		messages.forEach((message) => {
+		messages.forEach((message, index) => {
 			setTimeout(async () => {
 				await connection.sendTextMessage(contact.publicKey, message, Constants.TxtTypes.Plain);
-			}, 2000);
+			}, (index + 1) * 2000);
 		});
 	}
 	return;
@@ -217,10 +217,10 @@ const handleChannelMessage = async (message: any) => {
 
 		if (reply) {
 			const messages = divideMessage(reply);
-			messages.forEach((message) => {
+			messages.forEach((message, index) => {
 				setTimeout(async () => {
 					await connection.sendChannelTextMessage(commandChannel.channelIdx, message);
-				}, 2000);
+				}, (index + 1) * 2000);
 			});
 		}
 		return;
