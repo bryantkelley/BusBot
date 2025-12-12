@@ -143,6 +143,41 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
 	return reply;
 };
 
+// Better reply breaking using space locations
+// const breakReply: string[] = (reply: string) => {
+// 	const MAX_LENGTH = 120;
+// 	const messageCount = Math.ceil(reply.length / MAX_LENGTH);
+// 	const replies = [];
+// 	for (let index = 0; index < messageCount; index++) {
+// 		const breakIndex = reply.lastIndexOf(" ", MAX_LENGTH);
+// 	}
+// };
+
+const divideMessage = (message: string) => {
+	const MAX_LENGTH = 120;
+	let messageLength = message.length;
+	let messageCount = 1;
+
+	while (messageLength > MAX_LENGTH) {
+		messageCount = messageCount + 1;
+		messageLength = Math.ceil(messageLength / messageCount);
+	}
+
+	// naïve splitting method
+	const messages = [];
+	for (let index = 0; index < messageCount; index++) {
+		// check for what happens is end is too high
+		const startIndex = index * messageLength;
+		const endIndex = (index + 1) * messageLength;
+		const messagePart = `${message.substring(
+			startIndex,
+			endIndex < message.length ? endIndex : undefined
+		)} ${index + 1}/${messageCount}`;
+		messages.push(messagePart);
+	}
+	return messages;
+};
+
 const handleContactMessage = async (message: any) => {
 	console.log("Contact Message Received");
 
@@ -156,9 +191,12 @@ const handleContactMessage = async (message: any) => {
 	const reply = await handleCommand(cleanedMessage);
 
 	if (reply) {
-		setTimeout(async () => {
-			await connection.sendTextMessage(contact.publicKey, reply, Constants.TxtTypes.Plain);
-		}, 5000);
+		const messages = divideMessage(reply);
+		messages.forEach((message) => {
+			setTimeout(async () => {
+				await connection.sendTextMessage(contact.publicKey, message, Constants.TxtTypes.Plain);
+			}, 2000);
+		});
 	}
 	return;
 };
@@ -171,14 +209,19 @@ const handleChannelMessage = async (message: any) => {
 	const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
 
 	if (message.channelIdx === commandChannel.channelIdx) {
+		// remove the colon and the following space
 		const separatorIndex = message.text.trim().indexOf(":");
-		const cleanedMessage: string = message.text.slice(separatorIndex + 2).toLowerCase(); // remove the colon and the following space
+		const cleanedMessage: string = message.text.slice(separatorIndex + 2).toLowerCase();
+
 		const reply = await handleCommand(cleanedMessage);
 
 		if (reply) {
-			setTimeout(async () => {
-				await connection.sendChannelTextMessage(commandChannel.channelIdx, reply);
-			}, 5000);
+			const messages = divideMessage(reply);
+			messages.forEach((message) => {
+				setTimeout(async () => {
+					await connection.sendChannelTextMessage(commandChannel.channelIdx, message);
+				}, 2000);
+			});
 		}
 		return;
 	}
@@ -188,7 +231,7 @@ const handleChannelMessage = async (message: any) => {
 connection.on(Constants.PushCodes.Advert, async () => {
 	const contacts = await connection.getContacts();
 	// Filter out users and remove any room servers and repeaters
-	await contacts
+	contacts
 		.filter(({ type }: { type: number }) => type !== 1)
 		.map(({ publicKey, advName }: { publicKey: any; advName: string }) => {
 			console.log("Removing Contact:", advName);
