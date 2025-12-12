@@ -200,7 +200,7 @@ const handleContactMessage = async (message: any) => {
 		replies.forEach((replyPart, index) => {
 			setTimeout(async () => {
 				await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
-			}, (index + 1) * 2000);
+			}, (index + 1) * 5000);
 		});
 	}
 	return;
@@ -225,7 +225,7 @@ const handleChannelMessage = async (message: any) => {
 			replies.forEach((replyPart, index) => {
 				setTimeout(async () => {
 					await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
-				}, (index + 1) * 2000);
+				}, (index + 1) * 5000);
 			});
 		}
 		return;
