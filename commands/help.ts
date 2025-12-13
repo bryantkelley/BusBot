@@ -22,3 +22,7 @@ export const helpBus = () => {
 export const helpInfo = () => {
 	return "Transit scheduling, geographic, and real-time data provided by permission of King County.";
 };
+
+export const helpStats = () => {
+	return "Returns the number of queries answered since the service was started.";
+};

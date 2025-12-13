@@ -11,6 +11,7 @@ import {
 	helpBus,
 	helpInfo,
 	info,
+	stats,
 } from "./commands";
 
 // Check for environment variables
@@ -19,6 +20,7 @@ if (!process.env.SERIAL_PORT) {
 }
 
 let lastBotAdvert: number; // Date.now()
+let validQueryCount = 0;
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
@@ -136,6 +138,8 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
 		}
 	} else if (cleanedMessage.startsWith("beats")) {
 		reply = beats();
+	} else if (cleanedMessage.startsWith("stats")) {
+		reply = stats(validQueryCount);
 	} else {
 		// no command found, ignore this message
 		return;
@@ -199,6 +203,7 @@ const handleContactMessage = async (message: any) => {
 				}, (index + 1) * 2000);
 			})
 		);
+		validQueryCount = validQueryCount + 1;
 	}
 };
 
@@ -225,6 +230,7 @@ const handleChannelMessage = async (message: any) => {
 					}, (index + 1) * 2000);
 				})
 			);
+			validQueryCount = validQueryCount + 1;
 		}
 	}
 };
