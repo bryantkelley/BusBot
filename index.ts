@@ -168,7 +168,7 @@ const divideReply = (message: string) => {
 	words.forEach(({ segment }) => {
 		if (
 			replies[currentReplyIndex]?.length &&
-			replies[currentReplyIndex].length + segment.length > MAX_LENGTH
+			replies[currentReplyIndex].length + segment.length > messageLength
 		) {
 			currentReplyIndex = currentReplyIndex + 1;
 		}
