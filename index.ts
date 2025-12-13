@@ -143,19 +143,10 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
 	return reply;
 };
 
-// Better reply breaking using space locations
-// const breakReply: string[] = (reply: string) => {
-// 	const MAX_LENGTH = 120;
-// 	const messageCount = Math.ceil(reply.length / MAX_LENGTH);
-// 	const replies = [];
-// 	for (let index = 0; index < messageCount; index++) {
-// 		const breakIndex = reply.lastIndexOf(" ", MAX_LENGTH);
-// 	}
-// };
-
-const divideReply = (reply: string) => {
-	const MAX_LENGTH = 120;
-	let messageLength = reply.length;
+const divideReply = (message: string) => {
+	// 150 (max channel message size) - 32 (max name size) - 3 (mandatory channel message characters)
+	const MAX_LENGTH = 115;
+	let messageLength = message.length;
 	let messageCount = 1;
 
 	while (messageLength > MAX_LENGTH) {
@@ -165,22 +156,23 @@ const divideReply = (reply: string) => {
 
 	// return early if no split needed
 	if (messageCount === 1) {
-		return [reply];
+		return [message];
 	}
 
-	// naïve splitting method
-	const messages = [];
-	for (let index = 0; index < messageCount; index++) {
-		// check for what happens is end is too high
-		const startIndex = index * messageLength;
-		const endIndex = (index + 1) * messageLength;
-		const messagePart = `${reply.substring(
-			startIndex,
-			endIndex < reply.length ? endIndex : undefined
-		)} [${index + 1}/${messageCount}]`;
-		messages.push(messagePart);
+	const segmenter = new Intl.Segmenter(process.env.LANGUAGE_CODE ?? "en", { granularity: "word" });
+	const words = segmenter.segment(message)[Symbol.iterator]();
+
+	const replies: string[] = [];
+	let currentReplyIndex = 0;
+
+	for (const word in words) {
+		if (replies[currentReplyIndex].length + word.length > MAX_LENGTH) {
+			currentReplyIndex = currentReplyIndex + 1;
+		}
+		replies[currentReplyIndex] = replies[currentReplyIndex] + word;
 	}
-	return messages;
+
+	return replies;
 };
 
 const handleContactMessage = async (message: any) => {
