@@ -160,16 +160,19 @@ const divideReply = (message: string) => {
 	}
 
 	const segmenter = new Intl.Segmenter(process.env.LANGUAGE_CODE ?? "en", { granularity: "word" });
-	const words = segmenter.segment(message)[Symbol.iterator]();
+	const words = Array.from(segmenter.segment(message));
 
 	const replies: string[] = [];
 	let currentReplyIndex = 0;
 
 	for (const word in words) {
-		if (replies[currentReplyIndex].length + word.length > MAX_LENGTH) {
+		if (
+			replies[currentReplyIndex]?.length &&
+			replies[currentReplyIndex].length + word.length > MAX_LENGTH
+		) {
 			currentReplyIndex = currentReplyIndex + 1;
 		}
-		replies[currentReplyIndex] = replies[currentReplyIndex] + word;
+		replies[currentReplyIndex] = (replies[currentReplyIndex] ?? "") + word;
 	}
 
 	return replies;
