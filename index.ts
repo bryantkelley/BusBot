@@ -165,14 +165,14 @@ const divideReply = (message: string) => {
 	const replies: string[] = [];
 	let currentReplyIndex = 0;
 
-	for (const word in words) {
+	for (const segment in words) {
 		if (
 			replies[currentReplyIndex]?.length &&
-			replies[currentReplyIndex].length + word.length > MAX_LENGTH
+			replies[currentReplyIndex].length + segment.length > MAX_LENGTH
 		) {
 			currentReplyIndex = currentReplyIndex + 1;
 		}
-		replies[currentReplyIndex] = (replies[currentReplyIndex] ?? "") + word;
+		replies[currentReplyIndex] = (replies[currentReplyIndex] ?? "") + segment;
 	}
 
 	return replies;
