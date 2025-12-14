@@ -1,6 +1,6 @@
 // help
 export const help = () => {
-	return "Commands:\n• alerts\n• bus\n• info\n---\n• beats";
+	return "Commands:\n• alerts\n• bus\n• info\n---\n• beats\n• stats";
 };
 
 // help alerts
