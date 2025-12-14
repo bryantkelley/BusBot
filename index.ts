@@ -11,6 +11,8 @@ import {
 	helpBus,
 	helpInfo,
 	info,
+	ping,
+	pong,
 	stats,
 } from "./commands";
 
@@ -138,6 +140,10 @@ const handleCommand = async (cleanedMessage: string): Promise<string | undefined
 		}
 	} else if (cleanedMessage.startsWith("beats")) {
 		reply = beats();
+	} else if (cleanedMessage.startsWith("ping")) {
+		reply = ping();
+	} else if (cleanedMessage.startsWith("pong")) {
+		reply = pong();
 	} else if (cleanedMessage.startsWith("stats")) {
 		reply = stats(validQueryCount);
 	} else {
