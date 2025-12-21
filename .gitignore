@@ -4,7 +4,7 @@
 package-lock.json
 
 # environment config
-.env*
+.env
 
 # metro data
 /metro
