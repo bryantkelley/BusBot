@@ -84,73 +84,78 @@ connection.on(Constants.PushCodes.MsgWaiting, async () => {
 
 const handleCommand = async (cleanedMessage: string): Promise<string | undefined> => {
 	let reply = "";
-	if (cleanedMessage.startsWith("help")) {
-		if (cleanedMessage === "help alerts") {
-			reply = helpAlerts();
-		} else if (cleanedMessage === "help beats") {
-			reply = helpBeats();
-		} else if (cleanedMessage === "help bus") {
-			reply = helpBus();
-		} else if (cleanedMessage === "help info") {
-			reply = helpInfo();
-		} else {
-			reply = help();
-		}
-	} else if (cleanedMessage.startsWith("info")) {
-		reply = info();
-	} else if (cleanedMessage.startsWith("alerts")) {
-		const firstSpaceIndex = cleanedMessage.indexOf(" "); // Space after the word alerts
-		if (firstSpaceIndex === -1) {
-			// If no space found, return help
-			reply = helpAlerts();
-		} else if (firstSpaceIndex !== 6) {
-			// If the first space isn't the seventh character, then this isn't a command to answer
-			return;
-		} else {
-			const secondSpaceIndex = cleanedMessage.indexOf(" ", firstSpaceIndex + 1);
-			if (secondSpaceIndex === -1) {
-				// If there's no second space found, then this is a stopId only
-				const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
-				reply = await alertsStop(stopId);
+	try {
+		if (cleanedMessage.startsWith("help")) {
+			if (cleanedMessage === "help alerts") {
+				reply = helpAlerts();
+			} else if (cleanedMessage === "help beats") {
+				reply = helpBeats();
+			} else if (cleanedMessage === "help bus") {
+				reply = helpBus();
+			} else if (cleanedMessage === "help info") {
+				reply = helpInfo();
 			} else {
-				const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
-				const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
-				reply = await alertsStopAndRoute(stopId, routeId);
+				reply = help();
 			}
-		}
-	} else if (cleanedMessage.startsWith("bus")) {
-		const firstSpaceIndex = cleanedMessage.indexOf(" "); // Space after the word bus
-		if (firstSpaceIndex === -1) {
-			// If no space found, return help
-			reply = helpBus();
-		} else if (firstSpaceIndex !== 3) {
-			// If the first space isn't the fourth character, then this isn't a command to answer
-			return;
-		} else {
-			const secondSpaceIndex = cleanedMessage.indexOf(" ", firstSpaceIndex + 1);
-			if (secondSpaceIndex === -1) {
-				// If there's no second space found, then this is a stopId only
-				const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
-				reply = await busStop(stopId);
+		} else if (cleanedMessage.startsWith("info")) {
+			reply = info();
+		} else if (cleanedMessage.startsWith("alerts")) {
+			const firstSpaceIndex = cleanedMessage.indexOf(" "); // Space after the word alerts
+			if (firstSpaceIndex === -1) {
+				// If no space found, return help
+				reply = helpAlerts();
+			} else if (firstSpaceIndex !== 6) {
+				// If the first space isn't the seventh character, then this isn't a command to answer
+				return;
 			} else {
-				const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
-				const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
-				reply = await busStopAndRoute(stopId, routeId);
+				const secondSpaceIndex = cleanedMessage.indexOf(" ", firstSpaceIndex + 1);
+				if (secondSpaceIndex === -1) {
+					// If there's no second space found, then this is a stopId only
+					const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
+					reply = await alertsStop(stopId);
+				} else {
+					const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
+					const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
+					reply = await alertsStopAndRoute(stopId, routeId);
+				}
 			}
+		} else if (cleanedMessage.startsWith("bus")) {
+			const firstSpaceIndex = cleanedMessage.indexOf(" "); // Space after the word bus
+			if (firstSpaceIndex === -1) {
+				// If no space found, return help
+				reply = helpBus();
+			} else if (firstSpaceIndex !== 3) {
+				// If the first space isn't the fourth character, then this isn't a command to answer
+				return;
+			} else {
+				const secondSpaceIndex = cleanedMessage.indexOf(" ", firstSpaceIndex + 1);
+				if (secondSpaceIndex === -1) {
+					// If there's no second space found, then this is a stopId only
+					const stopId = cleanedMessage.slice(firstSpaceIndex + 1);
+					reply = await busStop(stopId);
+				} else {
+					const stopId = cleanedMessage.slice(firstSpaceIndex + 1, secondSpaceIndex);
+					const routeId = cleanedMessage.slice(secondSpaceIndex + 1);
+					reply = await busStopAndRoute(stopId, routeId);
+				}
+			}
+		} else if (cleanedMessage.startsWith("beats")) {
+			reply = beats();
+		} else if (cleanedMessage.startsWith("ping")) {
+			reply = ping();
+		} else if (cleanedMessage.startsWith("pong")) {
+			reply = pong();
+		} else if (cleanedMessage.startsWith("stats")) {
+			reply = stats(validQueryCount);
+		} else {
+			// no command found, ignore this message
+			return;
 		}
-	} else if (cleanedMessage.startsWith("beats")) {
-		reply = beats();
-	} else if (cleanedMessage.startsWith("ping")) {
-		reply = ping();
-	} else if (cleanedMessage.startsWith("pong")) {
-		reply = pong();
-	} else if (cleanedMessage.startsWith("stats")) {
-		reply = stats(validQueryCount);
-	} else {
-		// no command found, ignore this message
-		return;
+	} catch (e) {
+		reply = "There was an error running this command.";
+	} finally {
+		return reply;
 	}
-	return reply;
 };
 
 const divideReply = (message: string) => {
