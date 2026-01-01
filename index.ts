@@ -32,17 +32,21 @@ const checkToAdvertAndInfo = async () => {
 	// wait at least 7 days for next advert and info command
 	const currentTime = Date.now();
 	if (!lastBotAdvert || currentTime - lastBotAdvert > 7 * 24 * 60 * 60 * 1000) {
-		console.log("Sending Advert");
-		await connection.sendFloodAdvert();
-		lastBotAdvert = currentTime;
+		try {
+			console.log("Sending Advert");
+			await connection.sendFloodAdvert();
+			lastBotAdvert = currentTime;
 
-		if (!process.env.BOT_CHANNEL) {
-			throw new Error("Missing BOT_CHANNEL");
+			if (!process.env.BOT_CHANNEL) {
+				throw new Error("Missing BOT_CHANNEL");
+			}
+			const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
+			setTimeout(async () => {
+				await connection.sendChannelTextMessage(commandChannel.channelIdx, info());
+			}, 5000);
+		} catch (e) {
+			console.log("Error sending advert", e);
 		}
-		const commandChannel = await connection.findChannelByName(process.env.BOT_CHANNEL);
-		setTimeout(async () => {
-			await connection.sendChannelTextMessage(commandChannel.channelIdx, info());
-		}, 5000);
 	}
 };
 
@@ -272,21 +276,25 @@ connection.on(Constants.PushCodes.Advert, async () => {
 // lastMod: bufferReader.readUInt32LE(),
 connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 	if (advert.type === 1) {
-		const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
-			advert;
-		connection.addOrUpdateContact(
-			publicKey,
-			type,
-			flags,
-			outPathLen,
-			outPath,
-			advName,
-			lastAdvert,
-			advLat,
-			advLon
-		);
+		try {
+			const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
+				advert;
+			await connection.addOrUpdateContact(
+				publicKey,
+				type,
+				flags,
+				outPathLen,
+				outPath,
+				advName,
+				lastAdvert,
+				advLat,
+				advLon
+			);
 
-		checkToAdvertAndInfo();
+			await checkToAdvertAndInfo();
+		} catch (e) {
+			console.log("Error adding or updating contact", e);
+		}
 	}
 });
 
