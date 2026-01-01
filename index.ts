@@ -276,6 +276,7 @@ connection.on(Constants.PushCodes.Advert, async () => {
 // lastMod: bufferReader.readUInt32LE(),
 connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 	if (advert.type === 1) {
+		console.log("Companion advert receieved");
 		try {
 			const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
 				advert;
