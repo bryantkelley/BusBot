@@ -294,17 +294,24 @@ connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 		try {
 			const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
 				advert;
-			await connection.addOrUpdateContact(
-				publicKey,
-				type,
-				flags,
-				outPathLen,
-				outPath,
-				advName,
-				lastAdvert,
-				advLat,
-				advLon
-			);
+
+			const contacts = await connection.getContacts();
+
+			if (contacts.length < 100) {
+				await connection.addOrUpdateContact(
+					publicKey,
+					type,
+					flags,
+					outPathLen,
+					outPath,
+					advName,
+					lastAdvert,
+					advLat,
+					advLon
+				);
+			} else {
+				console.log("Too many contacts. Clear some up.");
+			}
 
 			await checkToAdvertAndInfo();
 		} catch (e) {
