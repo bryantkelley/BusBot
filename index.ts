@@ -15,14 +15,27 @@ import {
 	pong,
 	stats,
 } from "./commands";
+import { readFileSync, writeFileSync } from "node:fs";
 
 // Check for environment variables
 if (!process.env.SERIAL_PORT) {
 	throw new Error("Missing SERIAL_PORT");
 }
 
-let lastBotAdvert: number; // Date.now()
 let validQueryCount = 0;
+
+const loadLastAdvertTime = async (): Promise<number | undefined> => {
+	let lastAdvert;
+	try {
+		lastAdvert = await JSON.parse(readFileSync("./db/lastAdvert.json", "utf-8"))?.lastAdvert;
+	} catch (e) {
+		console.error("Error reading last advert from db:", e);
+	} finally {
+		return lastAdvert;
+	}
+};
+
+let lastBotAdvert = await loadLastAdvertTime(); // Date.now()
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
@@ -36,6 +49,7 @@ const checkToAdvertAndInfo = async () => {
 			console.log("Sending Advert");
 			await connection.sendFloodAdvert();
 			lastBotAdvert = currentTime;
+			writeFileSync("./db/lastAdvert.json", JSON.stringify({ lastAvert: currentTime }));
 
 			if (!process.env.BOT_CHANNEL) {
 				throw new Error("Missing BOT_CHANNEL");

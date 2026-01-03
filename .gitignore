@@ -6,6 +6,9 @@ package-lock.json
 # environment config
 .env
 
+# database
+/db
+
 # metro data
 /metro
 
