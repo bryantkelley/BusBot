@@ -229,6 +229,19 @@ const divideReply = (message: string) => {
 const handleContactMessage = async (message: any) => {
 	console.log("Contact Message Received");
 
+	try {
+		const appContact = users.find(({ pubKey }) =>
+			(message.pubKeyPrefix as Uint8Array<ArrayBuffer>).forEach(
+				(keyPart, index) => keyPart === pubKey[index],
+			),
+		);
+		if (appContact) {
+			console.log("Found matching user!", appContact);
+		}
+	} catch (e) {
+		console.error("Finding user didn't work", e);
+	}
+
 	const contact = await connection.findContactByPublicKeyPrefix(message.pubKeyPrefix);
 	if (!contact) {
 		console.log("No contact found for message");
