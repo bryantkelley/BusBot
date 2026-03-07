@@ -16,6 +16,7 @@ import {
 	stats,
 } from "./commands";
 import { readFileSync, writeFileSync } from "node:fs";
+import { User } from "./types";
 
 // Check for environment variables
 if (!process.env.SERIAL_PORT) {
@@ -36,6 +37,19 @@ const loadLastAdvertTime = async (): Promise<number | undefined> => {
 };
 
 let lastBotAdvert = await loadLastAdvertTime(); // Date.now()
+
+const loadContacts = async (): Promise<User[]> => {
+	let loadedUsers: User[] = [];
+	try {
+		loadedUsers.push(await JSON.parse(readFileSync("./db/users.json", "utf-8"))?.users);
+	} catch (e) {
+		console.error("Error reading saved users", e);
+	} finally {
+		return loadedUsers;
+	}
+};
+
+let users = await loadContacts();
 
 // Create connection to companion radio
 const connection = new NodeJSSerialConnection(process.env.SERIAL_PORT);
@@ -76,6 +90,7 @@ connection.on("connected", async () => {
 	if (!process.env.NODE_NAME) {
 		throw new Error("Missing NODE_NAME");
 	}
+
 	// Set Name
 	await connection.setAdvertName(process.env.NODE_NAME);
 
@@ -227,10 +242,17 @@ const handleContactMessage = async (message: any) => {
 		const replies = divideReply(reply);
 		await Promise.all(
 			replies.map((replyPart, index) => {
-				setTimeout(async () => {
-					await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
-				}, (index + 1) * 2000);
-			})
+				setTimeout(
+					async () => {
+						await connection.sendTextMessage(
+							contact.publicKey,
+							replyPart,
+							Constants.TxtTypes.Plain,
+						);
+					},
+					(index + 1) * 2000,
+				);
+			}),
 		);
 		validQueryCount = validQueryCount + 1;
 	}
@@ -254,10 +276,13 @@ const handleChannelMessage = async (message: any) => {
 			const replies = divideReply(reply);
 			await Promise.all(
 				replies.map((replyPart, index) => {
-					setTimeout(async () => {
-						await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
-					}, (index + 1) * 2000);
-				})
+					setTimeout(
+						async () => {
+							await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
+						},
+						(index + 1) * 2000,
+					);
+				}),
 			);
 			validQueryCount = validQueryCount + 1;
 		}
@@ -295,6 +320,15 @@ connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 			const { publicKey, type, flags, outPathLen, outPath, advName, lastAdvert, advLat, advLon } =
 				advert;
 
+			if (!users.find(({ pubKey }) => pubKey === publicKey)) {
+				users.push({ pubKey: publicKey, favoriteStops: [] });
+				try {
+					writeFileSync("./db/users.json", JSON.stringify({ users }));
+				} catch (e) {
+					console.error("Could not write users", e);
+				}
+			}
+
 			const contacts = await connection.getContacts();
 
 			if (contacts.length < 100) {
@@ -307,7 +341,7 @@ connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 					advName,
 					lastAdvert,
 					advLat,
-					advLon
+					advLon,
 				);
 			} else {
 				console.log("Too many contacts. Clear some up.");
