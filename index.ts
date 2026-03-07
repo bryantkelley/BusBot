@@ -41,7 +41,7 @@ let lastBotAdvert = await loadLastAdvertTime(); // Date.now()
 const loadContacts = async (): Promise<User[]> => {
 	let loadedUsers: User[] = [];
 	try {
-		loadedUsers.push(await JSON.parse(readFileSync("./db/users.json", "utf-8"))?.users);
+		loadedUsers = await JSON.parse(readFileSync("./db/users.json", "utf-8"))?.users;
 	} catch (e) {
 		console.error("Error reading saved users", e);
 	} finally {
