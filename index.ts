@@ -16,6 +16,7 @@ import {
 	stats,
 } from "./commands";
 import { readFileSync, writeFileSync } from "node:fs";
+import { FeedInfo } from "./types";
 
 // Check for environment variables
 if (!process.env.SERIAL_PORT) {
@@ -23,6 +24,19 @@ if (!process.env.SERIAL_PORT) {
 }
 
 let validQueryCount = 0;
+
+const loadFeedInfo = async (): Promise<FeedInfo> => {
+	let info;
+	try {
+		info = await JSON.parse(readFileSync("./metro/feed_info.json", "utf-8"))?.[0];
+	} catch (e) {
+		console.error("Error reading feed info:", e);
+	} finally {
+		return info;
+	}
+};
+
+let feedInfo = await loadFeedInfo();
 
 const loadLastAdvertTime = async (): Promise<number | undefined> => {
 	let lastAdvert;
@@ -58,6 +72,16 @@ const checkToAdvertAndInfo = async () => {
 			setTimeout(async () => {
 				await connection.sendChannelTextMessage(commandChannel.channelIdx, info());
 			}, 5000);
+
+			// If the current time is greater than the end date minus 14 days, notify channel
+			if (Date.now() > new Date(feedInfo.feed_end_date).valueOf() - 14 * 24 * 60 * 60 * 1000) {
+				setTimeout(async () => {
+					await connection.sendChannelTextMessage(
+						commandChannel.channelIdx,
+						"Feed expiring soon! Update required or everything breaks.",
+					);
+				}, 5000);
+			}
 		} catch (e) {
 			console.log("Error sending advert", e);
 		}
@@ -227,10 +251,17 @@ const handleContactMessage = async (message: any) => {
 		const replies = divideReply(reply);
 		await Promise.all(
 			replies.map((replyPart, index) => {
-				setTimeout(async () => {
-					await connection.sendTextMessage(contact.publicKey, replyPart, Constants.TxtTypes.Plain);
-				}, (index + 1) * 2000);
-			})
+				setTimeout(
+					async () => {
+						await connection.sendTextMessage(
+							contact.publicKey,
+							replyPart,
+							Constants.TxtTypes.Plain,
+						);
+					},
+					(index + 1) * 2000,
+				);
+			}),
 		);
 		validQueryCount = validQueryCount + 1;
 	}
@@ -254,10 +285,13 @@ const handleChannelMessage = async (message: any) => {
 			const replies = divideReply(reply);
 			await Promise.all(
 				replies.map((replyPart, index) => {
-					setTimeout(async () => {
-						await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
-					}, (index + 1) * 2000);
-				})
+					setTimeout(
+						async () => {
+							await connection.sendChannelTextMessage(commandChannel.channelIdx, replyPart);
+						},
+						(index + 1) * 2000,
+					);
+				}),
 			);
 			validQueryCount = validQueryCount + 1;
 		}
@@ -307,7 +341,7 @@ connection.on(Constants.PushCodes.NewAdvert, async (advert: any) => {
 					advName,
 					lastAdvert,
 					advLat,
-					advLon
+					advLon,
 				);
 			} else {
 				console.log("Too many contacts. Clear some up.");
