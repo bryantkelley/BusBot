@@ -28,7 +28,7 @@ let validQueryCount = 0;
 const loadFeedInfo = async (): Promise<FeedInfo> => {
 	let info;
 	try {
-		info = await JSON.parse(readFileSync("./metro/feed_info.json", "utf-8"))?.[0];
+		info = await JSON.parse(readFileSync("./metro/json/feed_info.json", "utf-8"))?.[0];
 	} catch (e) {
 		console.error("Error reading feed info:", e);
 	} finally {
