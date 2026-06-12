@@ -65,15 +65,15 @@ export const busStop = async (stopId: string) => {
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const currentDay = dayNames[new Date(Date.now()).getDay()];
 
-  const fitleredTrips = trips.filter(
+  const filteredTrips = trips.filter(
     (t: any) => calendar.find((c: any) => c.service_id === t.service_id)[currentDay] === "1"
   );
 
-  const schedule = stopTimes
+  const futureStopTimes = stopTimes
     .filter((stopTime: any) => stopTime.stop_id === stop.stop_id)
     .filter((stopTime: any) => stopTime.arrival_time >= currentTime);
   const nextArrivalByRoute: any[] = []; // { key: route_id, route_short_name, arrival_time }
-  schedule.forEach((stopTime: any) => {
+  futureStopTimes.forEach((stopTime: any) => {
     const tripUpdate = tripUpdates.find(
       (ut: any) => ut.trip_update.trip.trip_id === stopTime.trip_id
     );
@@ -85,15 +85,21 @@ export const busStop = async (stopId: string) => {
       const route = routes.find(
         (route: any) => route.route_id === tripUpdate?.trip_update.trip.route_id
       );
-      nextArrivalByRoute[route.route_id] = {
-        route_short_name: route.route_short_name,
-        arrival_time: new Date(stopUpdate.arrival?.time * 1000).toLocaleTimeString("en-US", {
-          hour12: false,
-        }) as TimeString,
-        scheduled: false,
-      };
+      if (
+        route &&
+        (!nextArrivalByRoute[route.route_id] ||
+          nextArrivalByRoute[route.route_id].arrival_time > stopTime.arrival_time)
+      ) {
+        nextArrivalByRoute[route.route_id] = {
+          route_short_name: route.route_short_name,
+          arrival_time: new Date(stopUpdate.arrival?.time * 1000).toLocaleTimeString("en-US", {
+            hour12: false,
+          }) as TimeString,
+          scheduled: false,
+        };
+      }
     } else {
-      const scheduledTrip = fitleredTrips.find((trip: any) => trip.trip_id === stopTime.trip_id);
+      const scheduledTrip = filteredTrips.find((trip: any) => trip.trip_id === stopTime.trip_id);
       const route = routes.find((route: any) => route.route_id === scheduledTrip?.route_id);
       if (
         route &&
